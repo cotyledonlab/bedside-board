@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-server
+data
+.git
+.gitignore
+*.md
+.env*
+tsconfig.tsbuildinfo

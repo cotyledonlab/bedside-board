@@ -23,68 +23,107 @@ export interface DayData {
   admissionDate: string | null
 }
 
-const STORAGE_KEY = 'bedside-board'
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
+// Get or generate a persistent user ID
+function getUserId(): string {
+  let userId = localStorage.getItem('bedside-board-user-id')
+  if (!userId) {
+    userId = crypto.randomUUID()
+    localStorage.setItem('bedside-board-user-id', userId)
+  }
+  return userId
+}
+
+function getHeaders(): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    'X-User-Id': getUserId()
+  }
+}
 
 function getDateKey(date: Date = new Date()): string {
   return date.toISOString().split('T')[0]
 }
 
-function getDefaultDayData(dateKey: string): DayData {
-  return {
-    date: dateKey,
-    mood: null,
-    pain: 0,
-    anxiety: 0,
-    energy: 5,
-    notes: '',
-    events: [],
-    questions: [],
-    admissionDate: null,
-  }
-}
-
-export function loadDayData(date: Date = new Date()): DayData {
+export async function loadDayData(date: Date = new Date()): Promise<DayData> {
   const dateKey = getDateKey(date)
-
   try {
-    const stored = localStorage.getItem(`${STORAGE_KEY}-${dateKey}`)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      return { ...getDefaultDayData(dateKey), ...parsed }
+    const res = await fetch(`${API_BASE}/api/days/${dateKey}`, {
+      headers: getHeaders()
+    })
+    if (!res.ok) throw new Error('Failed to load')
+    return await res.json()
+  } catch (error) {
+    console.error('Error loading day data:', error)
+    // Return default data on error
+    return {
+      date: dateKey,
+      mood: null,
+      pain: 0,
+      anxiety: 0,
+      energy: 5,
+      notes: '',
+      events: [],
+      questions: [],
+      admissionDate: null,
     }
-  } catch (e) {
-    console.error('Error loading day data:', e)
-  }
-
-  // Try to get admission date from previous days
-  const admissionDate = getAdmissionDate()
-  const defaultData = getDefaultDayData(dateKey)
-  if (admissionDate) {
-    defaultData.admissionDate = admissionDate
-  }
-
-  return defaultData
-}
-
-export function saveDayData(data: DayData): void {
-  try {
-    localStorage.setItem(`${STORAGE_KEY}-${data.date}`, JSON.stringify(data))
-
-    // Also save admission date globally if set
-    if (data.admissionDate) {
-      localStorage.setItem(`${STORAGE_KEY}-admission`, data.admissionDate)
-    }
-  } catch (e) {
-    console.error('Error saving day data:', e)
   }
 }
 
-export function getAdmissionDate(): string | null {
-  try {
-    return localStorage.getItem(`${STORAGE_KEY}-admission`)
-  } catch {
-    return null
-  }
+export async function updateDayData(date: string, updates: Partial<DayData>): Promise<DayData> {
+  const res = await fetch(`${API_BASE}/api/days/${date}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(updates)
+  })
+  if (!res.ok) throw new Error('Failed to update')
+  return await res.json()
+}
+
+export async function addEvent(date: string, event: EventEntry): Promise<DayData> {
+  const res = await fetch(`${API_BASE}/api/days/${date}/events`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(event)
+  })
+  if (!res.ok) throw new Error('Failed to add event')
+  return await res.json()
+}
+
+export async function deleteEvent(eventId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/events/${eventId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to delete event')
+}
+
+export async function addQuestion(date: string, question: Question): Promise<DayData> {
+  const res = await fetch(`${API_BASE}/api/days/${date}/questions`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(question)
+  })
+  if (!res.ok) throw new Error('Failed to add question')
+  return await res.json()
+}
+
+export async function updateQuestionAnswered(questionId: string, answered: boolean): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/questions/${questionId}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify({ answered })
+  })
+  if (!res.ok) throw new Error('Failed to update question')
+}
+
+export async function deleteQuestion(questionId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/questions/${questionId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to delete question')
 }
 
 export function calculateDayNumber(admissionDate: string | null): number | null {
@@ -110,7 +149,7 @@ export function formatTime(date: Date = new Date()): string {
 }
 
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
+  return crypto.randomUUID()
 }
 
 export function generateSummary(data: DayData): string {

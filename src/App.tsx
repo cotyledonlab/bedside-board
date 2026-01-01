@@ -1,7 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   loadDayData,
-  saveDayData,
+  updateDayData,
+  addEvent as apiAddEvent,
+  deleteEvent as apiDeleteEvent,
+  addQuestion as apiAddQuestion,
+  updateQuestionAnswered,
+  deleteQuestion as apiDeleteQuestion,
   generateId,
   formatTime,
   generateSummary,
@@ -25,80 +30,208 @@ const EVENT_TYPES = [
 
 export default function App() {
   const [data, setData] = useState<DayData | null>(null)
+  const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
   const [newQuestion, setNewQuestion] = useState('')
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load data on mount
   useEffect(() => {
-    setData(loadDayData())
+    loadDayData().then(dayData => {
+      setData(dayData)
+      setLoading(false)
+    })
   }, [])
-
-  // Save data whenever it changes
-  useEffect(() => {
-    if (data) {
-      saveDayData(data)
-    }
-  }, [data])
 
   const showToast = useCallback((message: string) => {
     setToast(message)
     setTimeout(() => setToast(null), 2000)
   }, [])
 
-  const updateData = useCallback((updates: Partial<DayData>) => {
-    setData(prev => prev ? { ...prev, ...updates } : prev)
-  }, [])
+  // Debounced update for sliders and text inputs
+  const debouncedUpdate = useCallback((updates: Partial<DayData>) => {
+    if (!data) return
 
-  const addEvent = useCallback((type: string) => {
+    // Update local state immediately for responsiveness
+    setData(prev => prev ? { ...prev, ...updates } : prev)
+
+    // Debounce API call
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+    debounceRef.current = setTimeout(() => {
+      updateDayData(data.date, updates).catch(err => {
+        console.error('Failed to save:', err)
+        showToast('Failed to save')
+      })
+    }, 500)
+  }, [data, showToast])
+
+  // Immediate update for mood (no debounce needed)
+  const updateMood = useCallback(async (mood: number) => {
+    if (!data) return
+    setData(prev => prev ? { ...prev, mood } : prev)
+    try {
+      await updateDayData(data.date, { mood })
+    } catch (err) {
+      console.error('Failed to save mood:', err)
+      showToast('Failed to save')
+    }
+  }, [data, showToast])
+
+  const updateAdmission = useCallback(async (admissionDate: string | null) => {
+    if (!data) return
+    setData(prev => prev ? { ...prev, admissionDate } : prev)
+    try {
+      await updateDayData(data.date, { admissionDate })
+    } catch (err) {
+      console.error('Failed to save admission date:', err)
+      showToast('Failed to save')
+    }
+  }, [data, showToast])
+
+  const addEvent = useCallback(async (type: string) => {
+    if (!data) return
+
     const event: EventEntry = {
       id: generateId(),
       time: formatTime(),
       type,
     }
+
+    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       events: [event, ...prev.events]
     } : prev)
-    showToast(`Logged: ${type}`)
-  }, [showToast])
 
-  const deleteEvent = useCallback((id: string) => {
+    try {
+      const updated = await apiAddEvent(data.date, event)
+      setData(updated)
+      showToast(`Logged: ${type}`)
+    } catch (err) {
+      console.error('Failed to add event:', err)
+      // Revert on error
+      setData(prev => prev ? {
+        ...prev,
+        events: prev.events.filter(e => e.id !== event.id)
+      } : prev)
+      showToast('Failed to log event')
+    }
+  }, [data, showToast])
+
+  const deleteEvent = useCallback(async (id: string) => {
+    if (!data) return
+
+    const eventToDelete = data.events.find(e => e.id === id)
+
+    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       events: prev.events.filter(e => e.id !== id)
     } : prev)
-  }, [])
 
-  const addQuestion = useCallback(() => {
-    if (!newQuestion.trim()) return
+    try {
+      await apiDeleteEvent(id)
+    } catch (err) {
+      console.error('Failed to delete event:', err)
+      // Revert on error
+      if (eventToDelete) {
+        setData(prev => prev ? {
+          ...prev,
+          events: [...prev.events, eventToDelete]
+        } : prev)
+      }
+      showToast('Failed to delete event')
+    }
+  }, [data, showToast])
+
+  const addQuestion = useCallback(async () => {
+    if (!newQuestion.trim() || !data) return
 
     const question: Question = {
       id: generateId(),
       text: newQuestion.trim(),
       answered: false,
     }
+
+    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       questions: [...prev.questions, question]
     } : prev)
     setNewQuestion('')
-  }, [newQuestion])
 
-  const toggleQuestion = useCallback((id: string) => {
+    try {
+      const updated = await apiAddQuestion(data.date, question)
+      setData(updated)
+    } catch (err) {
+      console.error('Failed to add question:', err)
+      // Revert on error
+      setData(prev => prev ? {
+        ...prev,
+        questions: prev.questions.filter(q => q.id !== question.id)
+      } : prev)
+      showToast('Failed to add question')
+    }
+  }, [data, newQuestion, showToast])
+
+  const toggleQuestion = useCallback(async (id: string) => {
+    if (!data) return
+
+    const question = data.questions.find(q => q.id === id)
+    if (!question) return
+
+    const newAnswered = !question.answered
+
+    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       questions: prev.questions.map(q =>
-        q.id === id ? { ...q, answered: !q.answered } : q
+        q.id === id ? { ...q, answered: newAnswered } : q
       )
     } : prev)
-  }, [])
 
-  const deleteQuestion = useCallback((id: string) => {
+    try {
+      await updateQuestionAnswered(id, newAnswered)
+    } catch (err) {
+      console.error('Failed to update question:', err)
+      // Revert on error
+      setData(prev => prev ? {
+        ...prev,
+        questions: prev.questions.map(q =>
+          q.id === id ? { ...q, answered: !newAnswered } : q
+        )
+      } : prev)
+      showToast('Failed to update question')
+    }
+  }, [data, showToast])
+
+  const deleteQuestion = useCallback(async (id: string) => {
+    if (!data) return
+
+    const questionToDelete = data.questions.find(q => q.id === id)
+
+    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       questions: prev.questions.filter(q => q.id !== id)
     } : prev)
-  }, [])
+
+    try {
+      await apiDeleteQuestion(id)
+    } catch (err) {
+      console.error('Failed to delete question:', err)
+      // Revert on error
+      if (questionToDelete) {
+        setData(prev => prev ? {
+          ...prev,
+          questions: [...prev.questions, questionToDelete]
+        } : prev)
+      }
+      showToast('Failed to delete question')
+    }
+  }, [data, showToast])
 
   const copySummary = useCallback(async () => {
     if (!data) return
@@ -119,10 +252,18 @@ export default function App() {
     }
   }, [data, showToast])
 
-  if (!data) {
+  if (loading) {
     return (
       <div className="container">
         <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="container">
+        <p>Failed to load data</p>
       </div>
     )
   }
@@ -158,7 +299,7 @@ export default function App() {
             type="date"
             className="admission-input"
             value={data.admissionDate || ''}
-            onChange={(e) => updateData({ admissionDate: e.target.value || null })}
+            onChange={(e) => updateAdmission(e.target.value || null)}
           />
         </div>
       </div>
@@ -173,7 +314,7 @@ export default function App() {
             <button
               key={index}
               className={`mood-btn ${data.mood === index ? 'selected' : ''}`}
-              onClick={() => updateData({ mood: index })}
+              onClick={() => updateMood(index)}
             >
               {emoji}
             </button>
@@ -196,7 +337,7 @@ export default function App() {
             min="0"
             max="10"
             value={data.pain}
-            onChange={(e) => updateData({ pain: parseInt(e.target.value) })}
+            onChange={(e) => debouncedUpdate({ pain: parseInt(e.target.value) })}
           />
         </div>
 
@@ -211,7 +352,7 @@ export default function App() {
             min="0"
             max="10"
             value={data.anxiety}
-            onChange={(e) => updateData({ anxiety: parseInt(e.target.value) })}
+            onChange={(e) => debouncedUpdate({ anxiety: parseInt(e.target.value) })}
           />
         </div>
 
@@ -226,7 +367,7 @@ export default function App() {
             min="0"
             max="10"
             value={data.energy}
-            onChange={(e) => updateData({ energy: parseInt(e.target.value) })}
+            onChange={(e) => debouncedUpdate({ energy: parseInt(e.target.value) })}
           />
         </div>
       </div>
@@ -238,7 +379,7 @@ export default function App() {
           className="notes-input"
           placeholder="Any symptoms, thoughts, or things to remember..."
           value={data.notes}
-          onChange={(e) => updateData({ notes: e.target.value })}
+          onChange={(e) => debouncedUpdate({ notes: e.target.value })}
         />
       </div>
 

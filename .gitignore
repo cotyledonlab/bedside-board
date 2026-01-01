@@ -3,7 +3,11 @@ node_modules/
 
 # Build output
 dist/
+dist-server/
 tsconfig.tsbuildinfo
+
+# Database
+data/
 
 # IDE
 .vscode/
