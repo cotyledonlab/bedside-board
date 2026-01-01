@@ -1,3 +1,27 @@
+// Types
+export interface Metric {
+  id: string
+  name: string
+  icon: string
+  minValue: number
+  maxValue: number
+  defaultValue: number
+  sortOrder: number
+}
+
+export interface EventType {
+  id: string
+  name: string
+  icon: string
+  sortOrder: number
+}
+
+export interface UserSettings {
+  metrics: Metric[]
+  eventTypes: EventType[]
+  admissionDate: string | null
+}
+
 export interface EventEntry {
   id: string
   time: string
@@ -14,13 +38,10 @@ export interface Question {
 export interface DayData {
   date: string
   mood: number | null
-  pain: number
-  anxiety: number
-  energy: number
+  metricValues: Record<string, number>
   notes: string
   events: EventEntry[]
   questions: Question[]
-  admissionDate: string | null
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -42,42 +63,95 @@ function getHeaders(): HeadersInit {
   }
 }
 
-function getDateKey(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0]
+// === Settings API ===
+
+export async function loadSettings(): Promise<UserSettings> {
+  const res = await fetch(`${API_BASE}/api/settings`, {
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to load settings')
+  return await res.json()
 }
 
-export async function loadDayData(date: Date = new Date()): Promise<DayData> {
-  const dateKey = getDateKey(date)
-  try {
-    const res = await fetch(`${API_BASE}/api/days/${dateKey}`, {
-      headers: getHeaders()
-    })
-    if (!res.ok) throw new Error('Failed to load')
-    return await res.json()
-  } catch (error) {
-    console.error('Error loading day data:', error)
-    // Return default data on error
-    return {
-      date: dateKey,
-      mood: null,
-      pain: 0,
-      anxiety: 0,
-      energy: 5,
-      notes: '',
-      events: [],
-      questions: [],
-      admissionDate: null,
-    }
-  }
+export async function addMetric(metric: Omit<Metric, 'id'>): Promise<Metric> {
+  const res = await fetch(`${API_BASE}/api/settings/metrics`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(metric)
+  })
+  if (!res.ok) throw new Error('Failed to add metric')
+  return await res.json()
 }
 
-export async function updateDayData(date: string, updates: Partial<DayData>): Promise<DayData> {
+export async function updateMetric(metric: Metric): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/settings/metrics/${metric.id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(metric)
+  })
+  if (!res.ok) throw new Error('Failed to update metric')
+}
+
+export async function deleteMetricApi(metricId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/settings/metrics/${metricId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to delete metric')
+}
+
+export async function addEventType(eventType: Omit<EventType, 'id'>): Promise<EventType> {
+  const res = await fetch(`${API_BASE}/api/settings/event-types`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(eventType)
+  })
+  if (!res.ok) throw new Error('Failed to add event type')
+  return await res.json()
+}
+
+export async function updateEventType(eventType: EventType): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/settings/event-types/${eventType.id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(eventType)
+  })
+  if (!res.ok) throw new Error('Failed to update event type')
+}
+
+export async function deleteEventTypeApi(eventTypeId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/settings/event-types/${eventTypeId}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to delete event type')
+}
+
+// === Day Data API ===
+
+export async function loadDaysWithData(limit: number = 30): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/api/days?limit=${limit}`, {
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to load days')
+  return await res.json()
+}
+
+export async function loadDayData(date: string): Promise<DayData> {
+  const res = await fetch(`${API_BASE}/api/days/${date}`, {
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to load day data')
+  return await res.json()
+}
+
+export async function updateDayData(date: string, updates: { mood?: number | null; metricValues?: Record<string, number>; notes?: string; admissionDate?: string | null }): Promise<DayData> {
   const res = await fetch(`${API_BASE}/api/days/${date}`, {
     method: 'PATCH',
     headers: getHeaders(),
     body: JSON.stringify(updates)
   })
-  if (!res.ok) throw new Error('Failed to update')
+  if (!res.ok) throw new Error('Failed to update day data')
   return await res.json()
 }
 
@@ -126,18 +200,24 @@ export async function deleteQuestion(questionId: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete question')
 }
 
-export function calculateDayNumber(admissionDate: string | null): number | null {
+// === Utility functions ===
+
+export function getDateKey(date: Date = new Date()): string {
+  return date.toISOString().split('T')[0]
+}
+
+export function calculateDayNumber(admissionDate: string | null, currentDate: string): number | null {
   if (!admissionDate) return null
 
   const admission = new Date(admissionDate)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const current = new Date(currentDate)
   admission.setHours(0, 0, 0, 0)
+  current.setHours(0, 0, 0, 0)
 
-  const diffTime = today.getTime() - admission.getTime()
+  const diffTime = current.getTime() - admission.getTime()
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
-  return diffDays + 1 // Day 1 is admission day
+  return diffDays + 1
 }
 
 export function formatTime(date: Date = new Date()): string {
@@ -152,26 +232,37 @@ export function generateId(): string {
   return crypto.randomUUID()
 }
 
-export function generateSummary(data: DayData): string {
-  const lines: string[] = []
+export function formatDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short'
+  })
+}
 
-  // Header
-  const date = new Date(data.date)
-  const dateStr = date.toLocaleDateString('en-GB', {
+export function formatDateLong(dateStr: string): string {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long'
   })
-  const dayNum = calculateDayNumber(data.admissionDate)
+}
 
-  if (dayNum) {
+export function generateSummary(data: DayData, settings: UserSettings): string {
+  const lines: string[] = []
+
+  const dateStr = formatDateLong(data.date)
+  const dayNum = calculateDayNumber(settings.admissionDate, data.date)
+
+  if (dayNum && dayNum > 0) {
     lines.push(`📋 ${dateStr} — Day ${dayNum} in hospital`)
   } else {
     lines.push(`📋 ${dateStr}`)
   }
   lines.push('')
 
-  // Current state
   lines.push('📊 How I\'m doing:')
 
   const moods = ['😫 Terrible', '😔 Not great', '😐 Okay', '🙂 Good', '😄 Great']
@@ -179,9 +270,10 @@ export function generateSummary(data: DayData): string {
     lines.push(`  Mood: ${moods[data.mood]}`)
   }
 
-  lines.push(`  Pain: ${data.pain}/10`)
-  lines.push(`  Anxiety: ${data.anxiety}/10`)
-  lines.push(`  Energy: ${data.energy}/10`)
+  for (const metric of settings.metrics) {
+    const value = data.metricValues[metric.id] ?? metric.defaultValue
+    lines.push(`  ${metric.name}: ${value}/${metric.maxValue}`)
+  }
 
   if (data.notes.trim()) {
     lines.push('')
@@ -189,7 +281,6 @@ export function generateSummary(data: DayData): string {
     lines.push(`  ${data.notes}`)
   }
 
-  // Events
   if (data.events.length > 0) {
     lines.push('')
     lines.push('📝 Today\'s events:')
@@ -199,7 +290,6 @@ export function generateSummary(data: DayData): string {
     })
   }
 
-  // Unanswered questions
   const unanswered = data.questions.filter(q => !q.answered)
   if (unanswered.length > 0) {
     lines.push('')
@@ -209,7 +299,6 @@ export function generateSummary(data: DayData): string {
     })
   }
 
-  // Answered questions
   const answered = data.questions.filter(q => q.answered)
   if (answered.length > 0) {
     lines.push('')

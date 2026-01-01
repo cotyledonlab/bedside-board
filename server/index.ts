@@ -6,13 +6,23 @@ import { fileURLToPath } from 'url'
 import {
   getDayData,
   updateDayData,
+  getDaysWithData,
+  getUserSettings,
+  addMetric,
+  updateMetric,
+  deleteMetric,
+  addEventType,
+  updateEventType,
+  deleteEventType,
   addEvent,
   deleteEvent,
   addQuestion,
   updateQuestion,
   deleteQuestion,
   type EventEntry,
-  type Question
+  type Question,
+  type Metric,
+  type EventType
 } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -32,23 +42,117 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-// For now, use a simple user ID (in production, add proper auth)
+// Get user ID from header
 const getUserId = (req: express.Request): string => {
   return req.headers['x-user-id'] as string || 'default-user'
 }
 
-const getDateParam = (req: express.Request): string => {
-  return req.params.date || new Date().toISOString().split('T')[0]
-}
+// === Settings API ===
 
-// API Routes
+// Get user settings (metrics, event types, admission date)
+app.get('/api/settings', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    const settings = getUserSettings(userId)
+    res.json(settings)
+  } catch (error) {
+    console.error('Error getting settings:', error)
+    res.status(500).json({ error: 'Failed to get settings' })
+  }
+})
+
+// === Metrics API ===
+
+app.post('/api/settings/metrics', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    const metric = addMetric(userId, req.body as Omit<Metric, 'id'>)
+    res.json(metric)
+  } catch (error) {
+    console.error('Error adding metric:', error)
+    res.status(500).json({ error: 'Failed to add metric' })
+  }
+})
+
+app.put('/api/settings/metrics/:id', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    const metric: Metric = { ...req.body, id: req.params.id }
+    updateMetric(userId, metric)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating metric:', error)
+    res.status(500).json({ error: 'Failed to update metric' })
+  }
+})
+
+app.delete('/api/settings/metrics/:id', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    deleteMetric(userId, req.params.id)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting metric:', error)
+    res.status(500).json({ error: 'Failed to delete metric' })
+  }
+})
+
+// === Event Types API ===
+
+app.post('/api/settings/event-types', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    const eventType = addEventType(userId, req.body as Omit<EventType, 'id'>)
+    res.json(eventType)
+  } catch (error) {
+    console.error('Error adding event type:', error)
+    res.status(500).json({ error: 'Failed to add event type' })
+  }
+})
+
+app.put('/api/settings/event-types/:id', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    const eventType: EventType = { ...req.body, id: req.params.id }
+    updateEventType(userId, eventType)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating event type:', error)
+    res.status(500).json({ error: 'Failed to update event type' })
+  }
+})
+
+app.delete('/api/settings/event-types/:id', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    deleteEventType(userId, req.params.id)
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting event type:', error)
+    res.status(500).json({ error: 'Failed to delete event type' })
+  }
+})
+
+// === Day Data API ===
+
+// Get list of days with data
+app.get('/api/days', (req, res) => {
+  try {
+    const userId = getUserId(req)
+    const limit = parseInt(req.query.limit as string) || 30
+    const days = getDaysWithData(userId, limit)
+    res.json(days)
+  } catch (error) {
+    console.error('Error getting days:', error)
+    res.status(500).json({ error: 'Failed to get days' })
+  }
+})
 
 // Get day data
 app.get('/api/days/:date', (req, res) => {
   try {
     const userId = getUserId(req)
-    const date = getDateParam(req)
-    const data = getDayData(userId, date)
+    const data = getDayData(userId, req.params.date)
     res.json(data)
   } catch (error) {
     console.error('Error getting day data:', error)
@@ -56,13 +160,12 @@ app.get('/api/days/:date', (req, res) => {
   }
 })
 
-// Update day data (mood, pain, anxiety, energy, notes, admissionDate)
+// Update day data
 app.patch('/api/days/:date', (req, res) => {
   try {
     const userId = getUserId(req)
-    const date = getDateParam(req)
-    updateDayData(userId, date, req.body)
-    const data = getDayData(userId, date)
+    updateDayData(userId, req.params.date, req.body)
+    const data = getDayData(userId, req.params.date)
     res.json(data)
   } catch (error) {
     console.error('Error updating day data:', error)
@@ -70,14 +173,14 @@ app.patch('/api/days/:date', (req, res) => {
   }
 })
 
-// Add event
+// === Events API ===
+
 app.post('/api/days/:date/events', (req, res) => {
   try {
     const userId = getUserId(req)
-    const date = getDateParam(req)
     const event: EventEntry = req.body
-    addEvent(userId, date, event)
-    const data = getDayData(userId, date)
+    addEvent(userId, req.params.date, event)
+    const data = getDayData(userId, req.params.date)
     res.json(data)
   } catch (error) {
     console.error('Error adding event:', error)
@@ -85,7 +188,6 @@ app.post('/api/days/:date/events', (req, res) => {
   }
 })
 
-// Delete event
 app.delete('/api/events/:id', (req, res) => {
   try {
     const userId = getUserId(req)
@@ -97,14 +199,14 @@ app.delete('/api/events/:id', (req, res) => {
   }
 })
 
-// Add question
+// === Questions API ===
+
 app.post('/api/days/:date/questions', (req, res) => {
   try {
     const userId = getUserId(req)
-    const date = getDateParam(req)
     const question: Question = req.body
-    addQuestion(userId, date, question)
-    const data = getDayData(userId, date)
+    addQuestion(userId, req.params.date, question)
+    const data = getDayData(userId, req.params.date)
     res.json(data)
   } catch (error) {
     console.error('Error adding question:', error)
@@ -112,7 +214,6 @@ app.post('/api/days/:date/questions', (req, res) => {
   }
 })
 
-// Update question (toggle answered)
 app.patch('/api/questions/:id', (req, res) => {
   try {
     const userId = getUserId(req)
@@ -124,7 +225,6 @@ app.patch('/api/questions/:id', (req, res) => {
   }
 })
 
-// Delete question
 app.delete('/api/questions/:id', (req, res) => {
   try {
     const userId = getUserId(req)

@@ -467,3 +467,246 @@ body {
   outline: none;
   border-color: var(--accent);
 }
+
+/* Date Navigation */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: var(--bg-input);
+  border: none;
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: var(--border);
+}
+
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.today-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.today-btn:hover {
+  background: var(--accent-hover);
+}
+
+.top-bar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-icon {
+  padding: 8px 10px;
+  font-size: 1.125rem;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+/* Slider Icon */
+.slider-icon {
+  margin-right: 6px;
+}
+
+/* Settings Modal */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.settings-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-header h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.settings-close:hover {
+  color: var(--text);
+}
+
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 12px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+}
+
+.settings-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.settings-hint {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border-radius: 8px;
+}
+
+.settings-item-icon {
+  font-size: 1.25rem;
+  min-width: 28px;
+  text-align: center;
+}
+
+.settings-item-name {
+  flex: 1;
+  font-size: 0.9375rem;
+}
+
+.settings-item-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.settings-item-btn:hover {
+  color: var(--text);
+}
+
+.settings-item-btn.delete:hover {
+  color: var(--danger);
+}
+
+.settings-edit-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.settings-add-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.settings-input.emoji-input {
+  flex: 0 0 50px;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+.settings-input::placeholder {
+  color: var(--text-muted);
+}

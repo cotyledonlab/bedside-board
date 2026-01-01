@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Settings from './Settings'
 import {
+  loadSettings,
   loadDayData,
   updateDayData,
   addEvent as apiAddEvent,
@@ -9,86 +11,114 @@ import {
   deleteQuestion as apiDeleteQuestion,
   generateId,
   formatTime,
+  formatDate,
+  getDateKey,
   generateSummary,
   calculateDayNumber,
   type DayData,
+  type UserSettings,
   type EventEntry,
   type Question,
 } from './storage'
 
 const MOODS = ['😫', '😔', '😐', '🙂', '😄']
 
-const EVENT_TYPES = [
-  { type: 'Obs done', icon: '🩺' },
-  { type: 'Bloods', icon: '🩸' },
-  { type: 'ECG', icon: '💓' },
-  { type: 'Scan/X-ray', icon: '📷' },
-  { type: 'Doctor round', icon: '👨‍⚕️' },
-  { type: 'Medication', icon: '💊' },
-  { type: 'Meal', icon: '🍽️' },
-]
-
 export default function App() {
+  const [settings, setSettings] = useState<UserSettings | null>(null)
   const [data, setData] = useState<DayData | null>(null)
+  const [currentDate, setCurrentDate] = useState(getDateKey())
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
   const [newQuestion, setNewQuestion] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Load data on mount
+  const isToday = currentDate === getDateKey()
+
+  // Load settings and initial day data
   useEffect(() => {
-    loadDayData().then(dayData => {
-      setData(dayData)
-      setLoading(false)
-    })
+    async function init() {
+      try {
+        const [settingsData, dayData] = await Promise.all([
+          loadSettings(),
+          loadDayData(currentDate)
+        ])
+        setSettings(settingsData)
+        setData(dayData)
+      } catch (err) {
+        console.error('Failed to load:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
   }, [])
+
+  // Load day data when date changes
+  useEffect(() => {
+    if (!settings) return
+    loadDayData(currentDate).then(setData).catch(console.error)
+  }, [currentDate, settings])
 
   const showToast = useCallback((message: string) => {
     setToast(message)
     setTimeout(() => setToast(null), 2000)
   }, [])
 
+  const navigateDate = (days: number) => {
+    const date = new Date(currentDate)
+    date.setDate(date.getDate() + days)
+    setCurrentDate(getDateKey(date))
+  }
+
+  const goToToday = () => {
+    setCurrentDate(getDateKey())
+  }
+
   // Debounced update for sliders and text inputs
-  const debouncedUpdate = useCallback((updates: Partial<DayData>) => {
+  const debouncedUpdate = useCallback((updates: { metricValues?: Record<string, number>; notes?: string }) => {
     if (!data) return
 
-    // Update local state immediately for responsiveness
     setData(prev => prev ? { ...prev, ...updates } : prev)
 
-    // Debounce API call
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
     }
     debounceRef.current = setTimeout(() => {
-      updateDayData(data.date, updates).catch(err => {
+      updateDayData(currentDate, updates).catch(err => {
         console.error('Failed to save:', err)
         showToast('Failed to save')
       })
     }, 500)
-  }, [data, showToast])
+  }, [currentDate, data, showToast])
 
-  // Immediate update for mood (no debounce needed)
   const updateMood = useCallback(async (mood: number) => {
     if (!data) return
     setData(prev => prev ? { ...prev, mood } : prev)
     try {
-      await updateDayData(data.date, { mood })
+      await updateDayData(currentDate, { mood })
     } catch (err) {
       console.error('Failed to save mood:', err)
       showToast('Failed to save')
     }
-  }, [data, showToast])
+  }, [currentDate, data, showToast])
 
   const updateAdmission = useCallback(async (admissionDate: string | null) => {
-    if (!data) return
-    setData(prev => prev ? { ...prev, admissionDate } : prev)
+    if (!settings) return
+    setSettings(prev => prev ? { ...prev, admissionDate } : prev)
     try {
-      await updateDayData(data.date, { admissionDate })
+      await updateDayData(currentDate, { admissionDate })
     } catch (err) {
       console.error('Failed to save admission date:', err)
       showToast('Failed to save')
     }
-  }, [data, showToast])
+  }, [currentDate, settings, showToast])
+
+  const updateMetricValue = useCallback((metricId: string, value: number) => {
+    if (!data) return
+    const newMetricValues = { ...data.metricValues, [metricId]: value }
+    debouncedUpdate({ metricValues: newMetricValues })
+  }, [data, debouncedUpdate])
 
   const addEvent = useCallback(async (type: string) => {
     if (!data) return
@@ -99,33 +129,30 @@ export default function App() {
       type,
     }
 
-    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       events: [event, ...prev.events]
     } : prev)
 
     try {
-      const updated = await apiAddEvent(data.date, event)
+      const updated = await apiAddEvent(currentDate, event)
       setData(updated)
       showToast(`Logged: ${type}`)
     } catch (err) {
       console.error('Failed to add event:', err)
-      // Revert on error
       setData(prev => prev ? {
         ...prev,
         events: prev.events.filter(e => e.id !== event.id)
       } : prev)
       showToast('Failed to log event')
     }
-  }, [data, showToast])
+  }, [currentDate, data, showToast])
 
   const deleteEvent = useCallback(async (id: string) => {
     if (!data) return
 
     const eventToDelete = data.events.find(e => e.id === id)
 
-    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       events: prev.events.filter(e => e.id !== id)
@@ -135,7 +162,6 @@ export default function App() {
       await apiDeleteEvent(id)
     } catch (err) {
       console.error('Failed to delete event:', err)
-      // Revert on error
       if (eventToDelete) {
         setData(prev => prev ? {
           ...prev,
@@ -155,7 +181,6 @@ export default function App() {
       answered: false,
     }
 
-    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       questions: [...prev.questions, question]
@@ -163,18 +188,17 @@ export default function App() {
     setNewQuestion('')
 
     try {
-      const updated = await apiAddQuestion(data.date, question)
+      const updated = await apiAddQuestion(currentDate, question)
       setData(updated)
     } catch (err) {
       console.error('Failed to add question:', err)
-      // Revert on error
       setData(prev => prev ? {
         ...prev,
         questions: prev.questions.filter(q => q.id !== question.id)
       } : prev)
       showToast('Failed to add question')
     }
-  }, [data, newQuestion, showToast])
+  }, [currentDate, data, newQuestion, showToast])
 
   const toggleQuestion = useCallback(async (id: string) => {
     if (!data) return
@@ -184,7 +208,6 @@ export default function App() {
 
     const newAnswered = !question.answered
 
-    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       questions: prev.questions.map(q =>
@@ -196,7 +219,6 @@ export default function App() {
       await updateQuestionAnswered(id, newAnswered)
     } catch (err) {
       console.error('Failed to update question:', err)
-      // Revert on error
       setData(prev => prev ? {
         ...prev,
         questions: prev.questions.map(q =>
@@ -212,7 +234,6 @@ export default function App() {
 
     const questionToDelete = data.questions.find(q => q.id === id)
 
-    // Optimistic update
     setData(prev => prev ? {
       ...prev,
       questions: prev.questions.filter(q => q.id !== id)
@@ -222,7 +243,6 @@ export default function App() {
       await apiDeleteQuestion(id)
     } catch (err) {
       console.error('Failed to delete question:', err)
-      // Revert on error
       if (questionToDelete) {
         setData(prev => prev ? {
           ...prev,
@@ -234,14 +254,13 @@ export default function App() {
   }, [data, showToast])
 
   const copySummary = useCallback(async () => {
-    if (!data) return
+    if (!data || !settings) return
 
-    const summary = generateSummary(data)
+    const summary = generateSummary(data, settings)
     try {
       await navigator.clipboard.writeText(summary)
       showToast('Summary copied!')
     } catch {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea')
       textArea.value = summary
       document.body.appendChild(textArea)
@@ -250,7 +269,7 @@ export default function App() {
       document.body.removeChild(textArea)
       showToast('Summary copied!')
     }
-  }, [data, showToast])
+  }, [data, settings, showToast])
 
   if (loading) {
     return (
@@ -260,7 +279,7 @@ export default function App() {
     )
   }
 
-  if (!data) {
+  if (!data || !settings) {
     return (
       <div className="container">
         <p>Failed to load data</p>
@@ -268,27 +287,33 @@ export default function App() {
     )
   }
 
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short'
-  })
-  const dayNumber = calculateDayNumber(data.admissionDate)
+  const dayNumber = calculateDayNumber(settings.admissionDate, currentDate)
 
   return (
     <div className="container">
       {/* Top Bar */}
       <div className="top-bar">
         <div className="date-display">
-          <span className="date-main">{dateStr}</span>
-          {dayNumber && (
+          <div className="date-nav">
+            <button className="nav-btn" onClick={() => navigateDate(-1)}>‹</button>
+            <span className="date-main">{formatDate(currentDate)}</span>
+            <button className="nav-btn" onClick={() => navigateDate(1)} disabled={isToday}>›</button>
+          </div>
+          {!isToday && (
+            <button className="today-btn" onClick={goToToday}>Today</button>
+          )}
+          {dayNumber && dayNumber > 0 && (
             <span className="date-sub">Day {dayNumber} in hospital</span>
           )}
         </div>
-        <button className="btn" onClick={copySummary}>
-          📋 Copy summary
-        </button>
+        <div className="top-bar-actions">
+          <button className="btn btn-icon" onClick={() => setShowSettings(true)} title="Settings">
+            ⚙️
+          </button>
+          <button className="btn" onClick={copySummary}>
+            📋 Copy
+          </button>
+        </div>
       </div>
 
       {/* Admission Date */}
@@ -298,17 +323,15 @@ export default function App() {
           <input
             type="date"
             className="admission-input"
-            value={data.admissionDate || ''}
+            value={settings.admissionDate || ''}
             onChange={(e) => updateAdmission(e.target.value || null)}
           />
         </div>
       </div>
 
-      {/* Your Current State */}
+      {/* Mood */}
       <div className="section">
         <h2 className="section-title">How are you feeling?</h2>
-
-        {/* Mood Picker */}
         <div className="mood-picker">
           {MOODS.map((emoji, index) => (
             <button
@@ -322,55 +345,34 @@ export default function App() {
         </div>
       </div>
 
-      {/* Sliders */}
-      <div className="section">
-        <h2 className="section-title">Your levels</h2>
-
-        <div className="slider-group">
-          <div className="slider-header">
-            <span className="slider-label">Pain</span>
-            <span className="slider-value">{data.pain}</span>
-          </div>
-          <input
-            type="range"
-            className="slider"
-            min="0"
-            max="10"
-            value={data.pain}
-            onChange={(e) => debouncedUpdate({ pain: parseInt(e.target.value) })}
-          />
+      {/* Dynamic Metrics */}
+      {settings.metrics.length > 0 && (
+        <div className="section">
+          <h2 className="section-title">Your levels</h2>
+          {settings.metrics.map(metric => {
+            const value = data.metricValues[metric.id] ?? metric.defaultValue
+            return (
+              <div key={metric.id} className="slider-group">
+                <div className="slider-header">
+                  <span className="slider-label">
+                    {metric.icon && <span className="slider-icon">{metric.icon}</span>}
+                    {metric.name}
+                  </span>
+                  <span className="slider-value">{value}</span>
+                </div>
+                <input
+                  type="range"
+                  className="slider"
+                  min={metric.minValue}
+                  max={metric.maxValue}
+                  value={value}
+                  onChange={(e) => updateMetricValue(metric.id, parseInt(e.target.value))}
+                />
+              </div>
+            )
+          })}
         </div>
-
-        <div className="slider-group">
-          <div className="slider-header">
-            <span className="slider-label">Anxiety</span>
-            <span className="slider-value">{data.anxiety}</span>
-          </div>
-          <input
-            type="range"
-            className="slider"
-            min="0"
-            max="10"
-            value={data.anxiety}
-            onChange={(e) => debouncedUpdate({ anxiety: parseInt(e.target.value) })}
-          />
-        </div>
-
-        <div className="slider-group">
-          <div className="slider-header">
-            <span className="slider-label">Energy</span>
-            <span className="slider-value">{data.energy}</span>
-          </div>
-          <input
-            type="range"
-            className="slider"
-            min="0"
-            max="10"
-            value={data.energy}
-            onChange={(e) => debouncedUpdate({ energy: parseInt(e.target.value) })}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Notes */}
       <div className="section">
@@ -384,41 +386,43 @@ export default function App() {
       </div>
 
       {/* Event Log */}
-      <div className="section">
-        <h2 className="section-title">Log an event</h2>
+      {settings.eventTypes.length > 0 && (
+        <div className="section">
+          <h2 className="section-title">Log an event</h2>
 
-        <div className="event-buttons">
-          {EVENT_TYPES.map(({ type, icon }) => (
-            <button
-              key={type}
-              className="event-btn"
-              onClick={() => addEvent(type)}
-            >
-              <span className="icon">{icon}</span>
-              {type}
-            </button>
-          ))}
-        </div>
+          <div className="event-buttons">
+            {settings.eventTypes.map(eventType => (
+              <button
+                key={eventType.id}
+                className="event-btn"
+                onClick={() => addEvent(eventType.name)}
+              >
+                <span className="icon">{eventType.icon}</span>
+                {eventType.name}
+              </button>
+            ))}
+          </div>
 
-        <div className="event-log">
-          {data.events.length === 0 ? (
-            <p className="no-events">No events logged yet today</p>
-          ) : (
-            data.events.map(event => (
-              <div key={event.id} className="event-item">
-                <span className="event-time">{event.time}</span>
-                <span className="event-text">{event.type}</span>
-                <button
-                  className="event-delete"
-                  onClick={() => deleteEvent(event.id)}
-                >
-                  ×
-                </button>
-              </div>
-            ))
-          )}
+          <div className="event-log">
+            {data.events.length === 0 ? (
+              <p className="no-events">No events logged yet</p>
+            ) : (
+              data.events.map(event => (
+                <div key={event.id} className="event-item">
+                  <span className="event-time">{event.time}</span>
+                  <span className="event-text">{event.type}</span>
+                  <button
+                    className="event-delete"
+                    onClick={() => deleteEvent(event.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Questions */}
       <div className="section">
@@ -467,6 +471,15 @@ export default function App() {
 
       {/* Toast */}
       {toast && <div className="toast">{toast}</div>}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings
+          settings={settings}
+          onUpdate={setSettings}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   )
 }
