@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import {
   getDayData,
@@ -18,8 +19,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 3001
 
+console.log('Starting server...')
+console.log('NODE_ENV:', process.env.NODE_ENV)
+console.log('PORT:', PORT)
+console.log('__dirname:', __dirname)
+
 app.use(cors())
 app.use(express.json())
+
+// Health check
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' })
+})
 
 // For now, use a simple user ID (in production, add proper auth)
 const getUserId = (req: express.Request): string => {
@@ -127,11 +138,19 @@ app.delete('/api/questions/:id', (req, res) => {
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  const staticPath = path.join(__dirname, '..', 'dist')
-  app.use(express.static(staticPath))
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'))
-  })
+  const staticPath = path.resolve(__dirname, '..', 'dist')
+  console.log('Static path:', staticPath)
+  console.log('Static path exists:', fs.existsSync(staticPath))
+
+  if (fs.existsSync(staticPath)) {
+    console.log('Static files:', fs.readdirSync(staticPath))
+    app.use(express.static(staticPath))
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(staticPath, 'index.html'))
+    })
+  } else {
+    console.error('Static path does not exist!')
+  }
 }
 
 app.listen(PORT, () => {
