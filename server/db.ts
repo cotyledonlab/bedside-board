@@ -155,26 +155,32 @@ function generateId(): string {
 // User operations
 export function getOrCreateUser(userId: string): void {
   const existing = db.prepare('SELECT id FROM users WHERE id = ?').get(userId)
-  if (existing) return
-
-  db.prepare('INSERT INTO users (id) VALUES (?)').run(userId)
-
-  // Create default metrics
-  const insertMetric = db.prepare(`
-    INSERT INTO user_metrics (id, user_id, name, icon, min_value, max_value, default_value, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `)
-  for (const m of DEFAULT_METRICS) {
-    insertMetric.run(generateId(), userId, m.name, m.icon, m.minValue, m.maxValue, m.defaultValue, m.sortOrder)
+  if (!existing) {
+    db.prepare('INSERT INTO users (id) VALUES (?)').run(userId)
   }
 
-  // Create default event types
-  const insertEventType = db.prepare(`
-    INSERT INTO user_event_types (id, user_id, name, icon, sort_order)
-    VALUES (?, ?, ?, ?, ?)
-  `)
-  for (const e of DEFAULT_EVENT_TYPES) {
-    insertEventType.run(generateId(), userId, e.name, e.icon, e.sortOrder)
+  // Check if user has metrics, if not create defaults
+  const metricCount = db.prepare('SELECT COUNT(*) as count FROM user_metrics WHERE user_id = ?').get(userId) as { count: number }
+  if (metricCount.count === 0) {
+    const insertMetric = db.prepare(`
+      INSERT INTO user_metrics (id, user_id, name, icon, min_value, max_value, default_value, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    for (const m of DEFAULT_METRICS) {
+      insertMetric.run(generateId(), userId, m.name, m.icon, m.minValue, m.maxValue, m.defaultValue, m.sortOrder)
+    }
+  }
+
+  // Check if user has event types, if not create defaults
+  const eventCount = db.prepare('SELECT COUNT(*) as count FROM user_event_types WHERE user_id = ?').get(userId) as { count: number }
+  if (eventCount.count === 0) {
+    const insertEventType = db.prepare(`
+      INSERT INTO user_event_types (id, user_id, name, icon, sort_order)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    for (const e of DEFAULT_EVENT_TYPES) {
+      insertEventType.run(generateId(), userId, e.name, e.icon, e.sortOrder)
+    }
   }
 }
 
