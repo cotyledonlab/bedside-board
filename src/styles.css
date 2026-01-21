@@ -710,3 +710,66 @@ body {
 .settings-input::placeholder {
   color: var(--text-muted);
 }
+
+/* Error Boundary */
+.error-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 400px;
+}
+
+.error-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.error-message {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-details {
+  margin-top: 24px;
+  text-align: left;
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.error-details summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+}
+
+.error-details pre {
+  font-size: 0.75rem;
+  color: var(--danger);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
