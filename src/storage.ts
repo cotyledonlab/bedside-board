@@ -59,7 +59,7 @@ function getUserId(): string {
 function getHeaders(): HeadersInit {
   return {
     'Content-Type': 'application/json',
-    'X-User-Id': getUserId()
+    'X-User-Id': getUserId(),
   }
 }
 
@@ -67,7 +67,7 @@ function getHeaders(): HeadersInit {
 
 export async function loadSettings(): Promise<UserSettings> {
   const res = await fetch(`${API_BASE}/api/settings`, {
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to load settings')
   return await res.json()
@@ -77,7 +77,7 @@ export async function addMetric(metric: Omit<Metric, 'id'>): Promise<Metric> {
   const res = await fetch(`${API_BASE}/api/settings/metrics`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(metric)
+    body: JSON.stringify(metric),
   })
   if (!res.ok) throw new Error('Failed to add metric')
   return await res.json()
@@ -87,7 +87,7 @@ export async function updateMetric(metric: Metric): Promise<void> {
   const res = await fetch(`${API_BASE}/api/settings/metrics/${metric.id}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify(metric)
+    body: JSON.stringify(metric),
   })
   if (!res.ok) throw new Error('Failed to update metric')
 }
@@ -95,7 +95,7 @@ export async function updateMetric(metric: Metric): Promise<void> {
 export async function deleteMetricApi(metricId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/settings/metrics/${metricId}`, {
     method: 'DELETE',
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to delete metric')
 }
@@ -104,7 +104,7 @@ export async function addEventType(eventType: Omit<EventType, 'id'>): Promise<Ev
   const res = await fetch(`${API_BASE}/api/settings/event-types`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(eventType)
+    body: JSON.stringify(eventType),
   })
   if (!res.ok) throw new Error('Failed to add event type')
   return await res.json()
@@ -114,7 +114,7 @@ export async function updateEventType(eventType: EventType): Promise<void> {
   const res = await fetch(`${API_BASE}/api/settings/event-types/${eventType.id}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify(eventType)
+    body: JSON.stringify(eventType),
   })
   if (!res.ok) throw new Error('Failed to update event type')
 }
@@ -122,7 +122,7 @@ export async function updateEventType(eventType: EventType): Promise<void> {
 export async function deleteEventTypeApi(eventTypeId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/settings/event-types/${eventTypeId}`, {
     method: 'DELETE',
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to delete event type')
 }
@@ -131,7 +131,7 @@ export async function deleteEventTypeApi(eventTypeId: string): Promise<void> {
 
 export async function loadDaysWithData(limit: number = 30): Promise<string[]> {
   const res = await fetch(`${API_BASE}/api/days?limit=${limit}`, {
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to load days')
   return await res.json()
@@ -139,17 +139,25 @@ export async function loadDaysWithData(limit: number = 30): Promise<string[]> {
 
 export async function loadDayData(date: string): Promise<DayData> {
   const res = await fetch(`${API_BASE}/api/days/${date}`, {
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to load day data')
   return await res.json()
 }
 
-export async function updateDayData(date: string, updates: { mood?: number | null; metricValues?: Record<string, number>; notes?: string; admissionDate?: string | null }): Promise<DayData> {
+export async function updateDayData(
+  date: string,
+  updates: {
+    mood?: number | null
+    metricValues?: Record<string, number>
+    notes?: string
+    admissionDate?: string | null
+  }
+): Promise<DayData> {
   const res = await fetch(`${API_BASE}/api/days/${date}`, {
     method: 'PATCH',
     headers: getHeaders(),
-    body: JSON.stringify(updates)
+    body: JSON.stringify(updates),
   })
   if (!res.ok) throw new Error('Failed to update day data')
   return await res.json()
@@ -159,7 +167,7 @@ export async function addEvent(date: string, event: EventEntry): Promise<DayData
   const res = await fetch(`${API_BASE}/api/days/${date}/events`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(event)
+    body: JSON.stringify(event),
   })
   if (!res.ok) throw new Error('Failed to add event')
   return await res.json()
@@ -168,7 +176,7 @@ export async function addEvent(date: string, event: EventEntry): Promise<DayData
 export async function deleteEvent(eventId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/events/${eventId}`, {
     method: 'DELETE',
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to delete event')
 }
@@ -177,7 +185,7 @@ export async function addQuestion(date: string, question: Question): Promise<Day
   const res = await fetch(`${API_BASE}/api/days/${date}/questions`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(question)
+    body: JSON.stringify(question),
   })
   if (!res.ok) throw new Error('Failed to add question')
   return await res.json()
@@ -187,7 +195,7 @@ export async function updateQuestionAnswered(questionId: string, answered: boole
   const res = await fetch(`${API_BASE}/api/questions/${questionId}`, {
     method: 'PATCH',
     headers: getHeaders(),
-    body: JSON.stringify({ answered })
+    body: JSON.stringify({ answered }),
   })
   if (!res.ok) throw new Error('Failed to update question')
 }
@@ -195,7 +203,7 @@ export async function updateQuestionAnswered(questionId: string, answered: boole
 export async function deleteQuestion(questionId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/questions/${questionId}`, {
     method: 'DELETE',
-    headers: getHeaders()
+    headers: getHeaders(),
   })
   if (!res.ok) throw new Error('Failed to delete question')
 }
@@ -206,7 +214,10 @@ export function getDateKey(date: Date = new Date()): string {
   return date.toISOString().split('T')[0]
 }
 
-export function calculateDayNumber(admissionDate: string | null, currentDate: string): number | null {
+export function calculateDayNumber(
+  admissionDate: string | null,
+  currentDate: string
+): number | null {
   if (!admissionDate) return null
 
   const admission = new Date(admissionDate)
@@ -224,7 +235,7 @@ export function formatTime(date: Date = new Date()): string {
   return date.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
   })
 }
 
@@ -237,7 +248,7 @@ export function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-GB', {
     weekday: 'short',
     day: 'numeric',
-    month: 'short'
+    month: 'short',
   })
 }
 
@@ -246,7 +257,7 @@ export function formatDateLong(dateStr: string): string {
   return date.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
-    month: 'long'
+    month: 'long',
   })
 }
 
@@ -263,7 +274,7 @@ export function generateSummary(data: DayData, settings: UserSettings): string {
   }
   lines.push('')
 
-  lines.push('📊 How I\'m doing:')
+  lines.push("📊 How I'm doing:")
 
   const moods = ['😫 Terrible', '😔 Not great', '😐 Okay', '🙂 Good', '😄 Great']
   if (data.mood !== null && data.mood >= 0 && data.mood < 5) {
@@ -283,7 +294,7 @@ export function generateSummary(data: DayData, settings: UserSettings): string {
 
   if (data.events.length > 0) {
     lines.push('')
-    lines.push('📝 Today\'s events:')
+    lines.push("📝 Today's events:")
     data.events.forEach(event => {
       const note = event.note ? ` (${event.note})` : ''
       lines.push(`  ${event.time} — ${event.type}${note}`)

@@ -22,7 +22,7 @@ import {
   type EventEntry,
   type Question,
   type Metric,
-  type EventType
+  type EventType,
 } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -44,7 +44,7 @@ app.get('/health', (_req, res) => {
 
 // Get user ID from header
 const getUserId = (req: express.Request): string => {
-  return req.headers['x-user-id'] as string || 'default-user'
+  return (req.headers['x-user-id'] as string) || 'default-user'
 }
 
 // === Settings API ===

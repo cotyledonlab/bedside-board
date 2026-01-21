@@ -8,7 +8,7 @@ import {
   deleteEventTypeApi,
   type Metric,
   type EventType,
-  type UserSettings
+  type UserSettings,
 } from './storage'
 
 interface SettingsProps {
@@ -33,11 +33,11 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
         minValue: 0,
         maxValue: 10,
         defaultValue: 5,
-        sortOrder: settings.metrics.length
+        sortOrder: settings.metrics.length,
       })
       onUpdate({
         ...settings,
-        metrics: [...settings.metrics, metric]
+        metrics: [...settings.metrics, metric],
       })
       setNewMetric({ name: '', icon: '' })
     } catch (err) {
@@ -50,7 +50,7 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
       await updateMetric(metric)
       onUpdate({
         ...settings,
-        metrics: settings.metrics.map(m => m.id === metric.id ? metric : m)
+        metrics: settings.metrics.map(m => (m.id === metric.id ? metric : m)),
       })
       setEditingMetric(null)
     } catch (err) {
@@ -63,7 +63,7 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
       await deleteMetricApi(metricId)
       onUpdate({
         ...settings,
-        metrics: settings.metrics.filter(m => m.id !== metricId)
+        metrics: settings.metrics.filter(m => m.id !== metricId),
       })
     } catch (err) {
       console.error('Failed to delete metric:', err)
@@ -76,11 +76,11 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
       const eventType = await addEventType({
         name: newEvent.name.trim(),
         icon: newEvent.icon || '📌',
-        sortOrder: settings.eventTypes.length
+        sortOrder: settings.eventTypes.length,
       })
       onUpdate({
         ...settings,
-        eventTypes: [...settings.eventTypes, eventType]
+        eventTypes: [...settings.eventTypes, eventType],
       })
       setNewEvent({ name: '', icon: '' })
     } catch (err) {
@@ -93,7 +93,7 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
       await updateEventType(eventType)
       onUpdate({
         ...settings,
-        eventTypes: settings.eventTypes.map(e => e.id === eventType.id ? eventType : e)
+        eventTypes: settings.eventTypes.map(e => (e.id === eventType.id ? eventType : e)),
       })
       setEditingEvent(null)
     } catch (err) {
@@ -106,7 +106,7 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
       await deleteEventTypeApi(eventTypeId)
       onUpdate({
         ...settings,
-        eventTypes: settings.eventTypes.filter(e => e.id !== eventTypeId)
+        eventTypes: settings.eventTypes.filter(e => e.id !== eventTypeId),
       })
     } catch (err) {
       console.error('Failed to delete event type:', err)
@@ -118,7 +118,9 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
       <div className="settings-modal">
         <div className="settings-header">
           <h2>Settings</h2>
-          <button className="settings-close" onClick={onClose}>×</button>
+          <button className="settings-close" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="settings-tabs">
@@ -159,10 +161,16 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
                         onChange={e => setEditingMetric({ ...editingMetric, name: e.target.value })}
                         placeholder="Name"
                       />
-                      <button className="btn btn-small" onClick={() => handleUpdateMetric(editingMetric)}>
+                      <button
+                        className="btn btn-small"
+                        onClick={() => handleUpdateMetric(editingMetric)}
+                      >
                         Save
                       </button>
-                      <button className="btn btn-small btn-secondary" onClick={() => setEditingMetric(null)}>
+                      <button
+                        className="btn btn-small btn-secondary"
+                        onClick={() => setEditingMetric(null)}
+                      >
                         Cancel
                       </button>
                     </div>
@@ -170,10 +178,16 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
                     <>
                       <span className="settings-item-icon">{metric.icon}</span>
                       <span className="settings-item-name">{metric.name}</span>
-                      <button className="settings-item-btn" onClick={() => setEditingMetric(metric)}>
+                      <button
+                        className="settings-item-btn"
+                        onClick={() => setEditingMetric(metric)}
+                      >
                         Edit
                       </button>
-                      <button className="settings-item-btn delete" onClick={() => handleDeleteMetric(metric.id)}>
+                      <button
+                        className="settings-item-btn delete"
+                        onClick={() => handleDeleteMetric(metric.id)}
+                      >
                         ×
                       </button>
                     </>
@@ -226,10 +240,16 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
                         onChange={e => setEditingEvent({ ...editingEvent, name: e.target.value })}
                         placeholder="Name"
                       />
-                      <button className="btn btn-small" onClick={() => handleUpdateEvent(editingEvent)}>
+                      <button
+                        className="btn btn-small"
+                        onClick={() => handleUpdateEvent(editingEvent)}
+                      >
                         Save
                       </button>
-                      <button className="btn btn-small btn-secondary" onClick={() => setEditingEvent(null)}>
+                      <button
+                        className="btn btn-small btn-secondary"
+                        onClick={() => setEditingEvent(null)}
+                      >
                         Cancel
                       </button>
                     </div>
@@ -237,10 +257,16 @@ export default function Settings({ settings, onUpdate, onClose }: SettingsProps)
                     <>
                       <span className="settings-item-icon">{eventType.icon}</span>
                       <span className="settings-item-name">{eventType.name}</span>
-                      <button className="settings-item-btn" onClick={() => setEditingEvent(eventType)}>
+                      <button
+                        className="settings-item-btn"
+                        onClick={() => setEditingEvent(eventType)}
+                      >
                         Edit
                       </button>
-                      <button className="settings-item-btn delete" onClick={() => handleDeleteEvent(eventType.id)}>
+                      <button
+                        className="settings-item-btn delete"
+                        onClick={() => handleDeleteEvent(eventType.id)}
+                      >
                         ×
                       </button>
                     </>

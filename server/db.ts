@@ -160,19 +160,32 @@ export function getOrCreateUser(userId: string): void {
   }
 
   // Check if user has metrics, if not create defaults
-  const metricCount = db.prepare('SELECT COUNT(*) as count FROM user_metrics WHERE user_id = ?').get(userId) as { count: number }
+  const metricCount = db
+    .prepare('SELECT COUNT(*) as count FROM user_metrics WHERE user_id = ?')
+    .get(userId) as { count: number }
   if (metricCount.count === 0) {
     const insertMetric = db.prepare(`
       INSERT INTO user_metrics (id, user_id, name, icon, min_value, max_value, default_value, sort_order)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
     for (const m of DEFAULT_METRICS) {
-      insertMetric.run(generateId(), userId, m.name, m.icon, m.minValue, m.maxValue, m.defaultValue, m.sortOrder)
+      insertMetric.run(
+        generateId(),
+        userId,
+        m.name,
+        m.icon,
+        m.minValue,
+        m.maxValue,
+        m.defaultValue,
+        m.sortOrder
+      )
     }
   }
 
   // Check if user has event types, if not create defaults
-  const eventCount = db.prepare('SELECT COUNT(*) as count FROM user_event_types WHERE user_id = ?').get(userId) as { count: number }
+  const eventCount = db
+    .prepare('SELECT COUNT(*) as count FROM user_event_types WHERE user_id = ?')
+    .get(userId) as { count: number }
   if (eventCount.count === 0) {
     const insertEventType = db.prepare(`
       INSERT INTO user_event_types (id, user_id, name, icon, sort_order)
@@ -187,17 +200,35 @@ export function getOrCreateUser(userId: string): void {
 export function getUserSettings(userId: string): UserSettings {
   getOrCreateUser(userId)
 
-  const metricsRaw = db.prepare(`
+  const metricsRaw = db
+    .prepare(
+      `
     SELECT id, name, icon, min_value, max_value, default_value, sort_order
     FROM user_metrics WHERE user_id = ? ORDER BY sort_order
-  `).all(userId) as { id: string; name: string; icon: string; min_value: number; max_value: number; default_value: number; sort_order: number }[]
+  `
+    )
+    .all(userId) as {
+    id: string
+    name: string
+    icon: string
+    min_value: number
+    max_value: number
+    default_value: number
+    sort_order: number
+  }[]
 
-  const eventTypesRaw = db.prepare(`
+  const eventTypesRaw = db
+    .prepare(
+      `
     SELECT id, name, icon, sort_order
     FROM user_event_types WHERE user_id = ? ORDER BY sort_order
-  `).all(userId) as { id: string; name: string; icon: string; sort_order: number }[]
+  `
+    )
+    .all(userId) as { id: string; name: string; icon: string; sort_order: number }[]
 
-  const user = db.prepare('SELECT admission_date FROM users WHERE id = ?').get(userId) as { admission_date: string | null } | undefined
+  const user = db.prepare('SELECT admission_date FROM users WHERE id = ?').get(userId) as
+    | { admission_date: string | null }
+    | undefined
 
   return {
     metrics: metricsRaw.map(m => ({
@@ -207,15 +238,15 @@ export function getUserSettings(userId: string): UserSettings {
       minValue: m.min_value,
       maxValue: m.max_value,
       defaultValue: m.default_value,
-      sortOrder: m.sort_order
+      sortOrder: m.sort_order,
     })),
     eventTypes: eventTypesRaw.map(e => ({
       id: e.id,
       name: e.name,
       icon: e.icon,
-      sortOrder: e.sort_order
+      sortOrder: e.sort_order,
     })),
-    admissionDate: user?.admission_date ?? null
+    admissionDate: user?.admission_date ?? null,
   }
 }
 
@@ -226,18 +257,40 @@ export function updateAdmissionDate(userId: string, admissionDate: string | null
 // Metric operations
 export function addMetric(userId: string, metric: Omit<Metric, 'id'>): Metric {
   const id = generateId()
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO user_metrics (id, user_id, name, icon, min_value, max_value, default_value, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, userId, metric.name, metric.icon, metric.minValue, metric.maxValue, metric.defaultValue, metric.sortOrder)
+  `
+  ).run(
+    id,
+    userId,
+    metric.name,
+    metric.icon,
+    metric.minValue,
+    metric.maxValue,
+    metric.defaultValue,
+    metric.sortOrder
+  )
   return { id, ...metric }
 }
 
 export function updateMetric(userId: string, metric: Metric): void {
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE user_metrics SET name = ?, icon = ?, min_value = ?, max_value = ?, default_value = ?, sort_order = ?
     WHERE id = ? AND user_id = ?
-  `).run(metric.name, metric.icon, metric.minValue, metric.maxValue, metric.defaultValue, metric.sortOrder, metric.id, userId)
+  `
+  ).run(
+    metric.name,
+    metric.icon,
+    metric.minValue,
+    metric.maxValue,
+    metric.defaultValue,
+    metric.sortOrder,
+    metric.id,
+    userId
+  )
 }
 
 export function deleteMetric(userId: string, metricId: string): void {
@@ -247,18 +300,22 @@ export function deleteMetric(userId: string, metricId: string): void {
 // Event type operations
 export function addEventType(userId: string, eventType: Omit<EventType, 'id'>): EventType {
   const id = generateId()
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO user_event_types (id, user_id, name, icon, sort_order)
     VALUES (?, ?, ?, ?, ?)
-  `).run(id, userId, eventType.name, eventType.icon, eventType.sortOrder)
+  `
+  ).run(id, userId, eventType.name, eventType.icon, eventType.sortOrder)
   return { id, ...eventType }
 }
 
 export function updateEventType(userId: string, eventType: EventType): void {
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE user_event_types SET name = ?, icon = ?, sort_order = ?
     WHERE id = ? AND user_id = ?
-  `).run(eventType.name, eventType.icon, eventType.sortOrder, eventType.id, userId)
+  `
+  ).run(eventType.name, eventType.icon, eventType.sortOrder, eventType.id, userId)
 }
 
 export function deleteEventType(userId: string, eventTypeId: string): void {
@@ -269,27 +326,41 @@ export function deleteEventType(userId: string, eventTypeId: string): void {
 export function getDayData(userId: string, date: string): DayData {
   getOrCreateUser(userId)
 
-  const dayRow = db.prepare(`
+  const dayRow = db
+    .prepare(
+      `
     SELECT date, mood, metric_values, notes
     FROM day_data WHERE user_id = ? AND date = ?
-  `).get(userId, date) as { date: string; mood: number | null; metric_values: string; notes: string } | undefined
+  `
+    )
+    .get(userId, date) as
+    | { date: string; mood: number | null; metric_values: string; notes: string }
+    | undefined
 
-  const events = db.prepare(`
+  const events = db
+    .prepare(
+      `
     SELECT id, time, type, note FROM events
     WHERE user_id = ? AND date = ?
     ORDER BY created_at DESC
-  `).all(userId, date) as EventEntry[]
+  `
+    )
+    .all(userId, date) as EventEntry[]
 
-  const questionsRaw = db.prepare(`
+  const questionsRaw = db
+    .prepare(
+      `
     SELECT id, text, answered FROM questions
     WHERE user_id = ? AND date = ?
     ORDER BY created_at ASC
-  `).all(userId, date) as { id: string; text: string; answered: number }[]
+  `
+    )
+    .all(userId, date) as { id: string; text: string; answered: number }[]
 
   const questions: Question[] = questionsRaw.map(q => ({
     id: q.id,
     text: q.text,
-    answered: q.answered === 1
+    answered: q.answered === 1,
   }))
 
   let metricValues: Record<string, number> = {}
@@ -307,14 +378,25 @@ export function getDayData(userId: string, date: string): DayData {
     metricValues,
     notes: dayRow?.notes ?? '',
     events,
-    questions
+    questions,
   }
 }
 
-export function updateDayData(userId: string, date: string, data: { mood?: number | null; metricValues?: Record<string, number>; notes?: string; admissionDate?: string | null }): void {
+export function updateDayData(
+  userId: string,
+  date: string,
+  data: {
+    mood?: number | null
+    metricValues?: Record<string, number>
+    notes?: string
+    admissionDate?: string | null
+  }
+): void {
   getOrCreateUser(userId)
 
-  const existing = db.prepare('SELECT id, metric_values FROM day_data WHERE user_id = ? AND date = ?').get(userId, date) as { id: number; metric_values: string } | undefined
+  const existing = db
+    .prepare('SELECT id, metric_values FROM day_data WHERE user_id = ? AND date = ?')
+    .get(userId, date) as { id: number; metric_values: string } | undefined
 
   if (existing) {
     const updates: string[] = []
@@ -344,13 +426,17 @@ export function updateDayData(userId: string, date: string, data: { mood?: numbe
     if (updates.length > 0) {
       updates.push("updated_at = datetime('now')")
       values.push(userId, date)
-      db.prepare(`UPDATE day_data SET ${updates.join(', ')} WHERE user_id = ? AND date = ?`).run(...values)
+      db.prepare(`UPDATE day_data SET ${updates.join(', ')} WHERE user_id = ? AND date = ?`).run(
+        ...values
+      )
     }
   } else {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO day_data (user_id, date, mood, metric_values, notes)
       VALUES (?, ?, ?, ?, ?)
-    `).run(
+    `
+    ).run(
       userId,
       date,
       data.mood ?? null,
@@ -366,21 +452,27 @@ export function updateDayData(userId: string, date: string, data: { mood?: numbe
 
 // Get list of days with data for historical view
 export function getDaysWithData(userId: string, limit: number = 30): string[] {
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT DISTINCT date FROM day_data
     WHERE user_id = ?
     ORDER BY date DESC
     LIMIT ?
-  `).all(userId, limit) as { date: string }[]
+  `
+    )
+    .all(userId, limit) as { date: string }[]
   return rows.map(r => r.date)
 }
 
 // Event operations
 export function addEvent(userId: string, date: string, event: EventEntry): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO events (id, user_id, date, time, type, note)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(event.id, userId, date, event.time, event.type, event.note ?? null)
+  `
+  ).run(event.id, userId, date, event.time, event.type, event.note ?? null)
 }
 
 export function deleteEvent(userId: string, eventId: string): void {
@@ -389,14 +481,20 @@ export function deleteEvent(userId: string, eventId: string): void {
 
 // Question operations
 export function addQuestion(userId: string, date: string, question: Question): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO questions (id, user_id, date, text, answered)
     VALUES (?, ?, ?, ?, ?)
-  `).run(question.id, userId, date, question.text, question.answered ? 1 : 0)
+  `
+  ).run(question.id, userId, date, question.text, question.answered ? 1 : 0)
 }
 
 export function updateQuestion(userId: string, questionId: string, answered: boolean): void {
-  db.prepare('UPDATE questions SET answered = ? WHERE id = ? AND user_id = ?').run(answered ? 1 : 0, questionId, userId)
+  db.prepare('UPDATE questions SET answered = ? WHERE id = ? AND user_id = ?').run(
+    answered ? 1 : 0,
+    questionId,
+    userId
+  )
 }
 
 export function deleteQuestion(userId: string, questionId: string): void {
