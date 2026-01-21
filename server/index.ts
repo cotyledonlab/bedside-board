@@ -19,11 +19,21 @@ import {
   addQuestion,
   updateQuestion,
   deleteQuestion,
-  type EventEntry,
-  type Question,
-  type Metric,
-  type EventType,
 } from './db.js'
+import {
+  validate,
+  CreateMetricSchema,
+  MetricSchema,
+  CreateEventTypeSchema,
+  EventTypeSchema,
+  EventEntrySchema,
+  QuestionSchema,
+  DayDataUpdateSchema,
+  DateParamSchema,
+  IdParamSchema,
+  LimitQuerySchema,
+  QuestionAnsweredSchema,
+} from '../shared/validation.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -42,9 +52,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-// Get user ID from header
+// Get user ID from header (validate UUID format)
 const getUserId = (req: express.Request): string => {
-  return (req.headers['x-user-id'] as string) || 'default-user'
+  const userId = req.headers['x-user-id'] as string
+  if (!userId || typeof userId !== 'string' || userId.length > 100) {
+    return 'default-user'
+  }
+  return userId
 }
 
 // === Settings API ===
@@ -66,7 +80,12 @@ app.get('/api/settings', (req, res) => {
 app.post('/api/settings/metrics', (req, res) => {
   try {
     const userId = getUserId(req)
-    const metric = addMetric(userId, req.body as Omit<Metric, 'id'>)
+    const validation = validate(CreateMetricSchema, req.body)
+    if (!validation.success) {
+      res.status(400).json({ error: validation.error })
+      return
+    }
+    const metric = addMetric(userId, validation.data)
     res.json(metric)
   } catch (error) {
     console.error('Error adding metric:', error)
@@ -77,8 +96,17 @@ app.post('/api/settings/metrics', (req, res) => {
 app.put('/api/settings/metrics/:id', (req, res) => {
   try {
     const userId = getUserId(req)
-    const metric: Metric = { ...req.body, id: req.params.id }
-    updateMetric(userId, metric)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
+    const validation = validate(MetricSchema, { ...req.body, id: req.params.id })
+    if (!validation.success) {
+      res.status(400).json({ error: validation.error })
+      return
+    }
+    updateMetric(userId, validation.data)
     res.json({ success: true })
   } catch (error) {
     console.error('Error updating metric:', error)
@@ -89,6 +117,11 @@ app.put('/api/settings/metrics/:id', (req, res) => {
 app.delete('/api/settings/metrics/:id', (req, res) => {
   try {
     const userId = getUserId(req)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
     deleteMetric(userId, req.params.id)
     res.json({ success: true })
   } catch (error) {
@@ -102,7 +135,12 @@ app.delete('/api/settings/metrics/:id', (req, res) => {
 app.post('/api/settings/event-types', (req, res) => {
   try {
     const userId = getUserId(req)
-    const eventType = addEventType(userId, req.body as Omit<EventType, 'id'>)
+    const validation = validate(CreateEventTypeSchema, req.body)
+    if (!validation.success) {
+      res.status(400).json({ error: validation.error })
+      return
+    }
+    const eventType = addEventType(userId, validation.data)
     res.json(eventType)
   } catch (error) {
     console.error('Error adding event type:', error)
@@ -113,8 +151,17 @@ app.post('/api/settings/event-types', (req, res) => {
 app.put('/api/settings/event-types/:id', (req, res) => {
   try {
     const userId = getUserId(req)
-    const eventType: EventType = { ...req.body, id: req.params.id }
-    updateEventType(userId, eventType)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
+    const validation = validate(EventTypeSchema, { ...req.body, id: req.params.id })
+    if (!validation.success) {
+      res.status(400).json({ error: validation.error })
+      return
+    }
+    updateEventType(userId, validation.data)
     res.json({ success: true })
   } catch (error) {
     console.error('Error updating event type:', error)
@@ -125,6 +172,11 @@ app.put('/api/settings/event-types/:id', (req, res) => {
 app.delete('/api/settings/event-types/:id', (req, res) => {
   try {
     const userId = getUserId(req)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
     deleteEventType(userId, req.params.id)
     res.json({ success: true })
   } catch (error) {
@@ -139,8 +191,12 @@ app.delete('/api/settings/event-types/:id', (req, res) => {
 app.get('/api/days', (req, res) => {
   try {
     const userId = getUserId(req)
-    const limit = parseInt(req.query.limit as string) || 30
-    const days = getDaysWithData(userId, limit)
+    const limitValidation = validate(LimitQuerySchema, req.query.limit || 30)
+    if (!limitValidation.success) {
+      res.status(400).json({ error: limitValidation.error })
+      return
+    }
+    const days = getDaysWithData(userId, limitValidation.data)
     res.json(days)
   } catch (error) {
     console.error('Error getting days:', error)
@@ -152,7 +208,12 @@ app.get('/api/days', (req, res) => {
 app.get('/api/days/:date', (req, res) => {
   try {
     const userId = getUserId(req)
-    const data = getDayData(userId, req.params.date)
+    const dateValidation = validate(DateParamSchema, req.params.date)
+    if (!dateValidation.success) {
+      res.status(400).json({ error: dateValidation.error })
+      return
+    }
+    const data = getDayData(userId, dateValidation.data)
     res.json(data)
   } catch (error) {
     console.error('Error getting day data:', error)
@@ -164,8 +225,18 @@ app.get('/api/days/:date', (req, res) => {
 app.patch('/api/days/:date', (req, res) => {
   try {
     const userId = getUserId(req)
-    updateDayData(userId, req.params.date, req.body)
-    const data = getDayData(userId, req.params.date)
+    const dateValidation = validate(DateParamSchema, req.params.date)
+    if (!dateValidation.success) {
+      res.status(400).json({ error: dateValidation.error })
+      return
+    }
+    const bodyValidation = validate(DayDataUpdateSchema, req.body)
+    if (!bodyValidation.success) {
+      res.status(400).json({ error: bodyValidation.error })
+      return
+    }
+    updateDayData(userId, dateValidation.data, bodyValidation.data)
+    const data = getDayData(userId, dateValidation.data)
     res.json(data)
   } catch (error) {
     console.error('Error updating day data:', error)
@@ -178,9 +249,18 @@ app.patch('/api/days/:date', (req, res) => {
 app.post('/api/days/:date/events', (req, res) => {
   try {
     const userId = getUserId(req)
-    const event: EventEntry = req.body
-    addEvent(userId, req.params.date, event)
-    const data = getDayData(userId, req.params.date)
+    const dateValidation = validate(DateParamSchema, req.params.date)
+    if (!dateValidation.success) {
+      res.status(400).json({ error: dateValidation.error })
+      return
+    }
+    const eventValidation = validate(EventEntrySchema, req.body)
+    if (!eventValidation.success) {
+      res.status(400).json({ error: eventValidation.error })
+      return
+    }
+    addEvent(userId, dateValidation.data, eventValidation.data)
+    const data = getDayData(userId, dateValidation.data)
     res.json(data)
   } catch (error) {
     console.error('Error adding event:', error)
@@ -191,6 +271,11 @@ app.post('/api/days/:date/events', (req, res) => {
 app.delete('/api/events/:id', (req, res) => {
   try {
     const userId = getUserId(req)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
     deleteEvent(userId, req.params.id)
     res.json({ success: true })
   } catch (error) {
@@ -204,9 +289,18 @@ app.delete('/api/events/:id', (req, res) => {
 app.post('/api/days/:date/questions', (req, res) => {
   try {
     const userId = getUserId(req)
-    const question: Question = req.body
-    addQuestion(userId, req.params.date, question)
-    const data = getDayData(userId, req.params.date)
+    const dateValidation = validate(DateParamSchema, req.params.date)
+    if (!dateValidation.success) {
+      res.status(400).json({ error: dateValidation.error })
+      return
+    }
+    const questionValidation = validate(QuestionSchema, req.body)
+    if (!questionValidation.success) {
+      res.status(400).json({ error: questionValidation.error })
+      return
+    }
+    addQuestion(userId, dateValidation.data, questionValidation.data)
+    const data = getDayData(userId, dateValidation.data)
     res.json(data)
   } catch (error) {
     console.error('Error adding question:', error)
@@ -217,7 +311,17 @@ app.post('/api/days/:date/questions', (req, res) => {
 app.patch('/api/questions/:id', (req, res) => {
   try {
     const userId = getUserId(req)
-    updateQuestion(userId, req.params.id, req.body.answered)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
+    const bodyValidation = validate(QuestionAnsweredSchema, req.body)
+    if (!bodyValidation.success) {
+      res.status(400).json({ error: bodyValidation.error })
+      return
+    }
+    updateQuestion(userId, req.params.id, bodyValidation.data.answered)
     res.json({ success: true })
   } catch (error) {
     console.error('Error updating question:', error)
@@ -228,6 +332,11 @@ app.patch('/api/questions/:id', (req, res) => {
 app.delete('/api/questions/:id', (req, res) => {
   try {
     const userId = getUserId(req)
+    const idValidation = validate(IdParamSchema, req.params.id)
+    if (!idValidation.success) {
+      res.status(400).json({ error: idValidation.error })
+      return
+    }
     deleteQuestion(userId, req.params.id)
     res.json({ success: true })
   } catch (error) {

@@ -100,7 +100,14 @@ export type {
   CareTeamMember,
 } from '../shared/types.js'
 
-import type { Metric, EventType, UserSettings, EventEntry, Question, DayData } from '../shared/types.js'
+import type {
+  Metric,
+  EventType,
+  UserSettings,
+  EventEntry,
+  Question,
+  DayData,
+} from '../shared/types.js'
 
 // Default metrics for new users
 const DEFAULT_METRICS: Omit<Metric, 'id'>[] = [

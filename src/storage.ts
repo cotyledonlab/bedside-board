@@ -16,7 +16,14 @@ export type {
 
 export { MOOD_LEVELS, VITALS_TYPES, DEFAULT_CARE_TEAM_ROLES } from '../shared/types'
 
-import type { Metric, EventType, DayData, EventEntry, Question, UserSettings } from '../shared/types'
+import type {
+  Metric,
+  EventType,
+  DayData,
+  EventEntry,
+  Question,
+  UserSettings,
+} from '../shared/types'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
