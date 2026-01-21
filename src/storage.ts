@@ -9,6 +9,7 @@ export type {
   DayDataUpdate,
   VitalsReading,
   VitalsType,
+  VitalsTypeInfo,
   Medication,
   MedicationDose,
   CareTeamMember,
