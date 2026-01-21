@@ -11,6 +11,8 @@
 ![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=flat-square&logo=sqlite&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-45%20passing-4ade80?style=flat-square)
+![Accessible](https://img.shields.io/badge/WCAG-Accessible-38bdf8?style=flat-square)
 
 **A simple, touch-friendly dashboard to track daily health status during hospital stays.**
 
@@ -26,11 +28,17 @@
 - **Mood tracker** — Quick emoji-based mood logging (😫 😔 😐 🙂 😄)
 - **Custom metrics** — Track pain, anxiety, energy, or any metric that matters to you
 - **Daily notes** — Record symptoms, thoughts, and observations
+- **Vitals tracking** — Record blood pressure, heart rate, temperature, O2 saturation, respiratory rate, and blood glucose
 
 ### 🩺 Medical Event Logging
 - **One-tap logging** — Quickly log obs, bloods, ECG, scans, doctor rounds, medications, and meals
 - **Timestamped entries** — Every event is recorded with the exact time
 - **Customizable events** — Add your own event types in settings
+
+### 👩‍⚕️ Care Team Management
+- **Track your team** — Keep a list of doctors, nurses, specialists, and other care providers
+- **Role-based icons** — Quick visual identification of team member roles
+- **Notes field** — Add notes like "Rounds at 9am" for each team member
 
 ### ❓ Questions for Your Team
 - **Track questions** — Write down questions as you think of them
@@ -41,6 +49,12 @@
 - **Copy to clipboard** — Generate a formatted summary to share with nurses or doctors
 - **Hospital day counter** — Shows "Day X in hospital" based on your admission date
 - **Historical view** — Navigate back to previous days to review your journey
+
+### ♿ Accessibility
+- **Touch-friendly** — Large tap targets (44px minimum) for patients with limited dexterity
+- **Screen reader support** — Full ARIA labels and semantic HTML
+- **Keyboard navigation** — Complete keyboard support with visible focus states
+- **High contrast** — Clear visual design that works in low-light hospital rooms
 
 ---
 
@@ -78,6 +92,20 @@ npm run build:server
 NODE_ENV=production npm start
 ```
 
+### Development Scripts
+
+```bash
+# Run tests
+npm test              # Run tests in watch mode
+npm test -- --run     # Run tests once
+
+# Code quality
+npm run lint          # Check for linting issues
+npm run lint:fix      # Fix linting issues
+npm run format        # Format code with Prettier
+npm run typecheck     # Check TypeScript types
+```
+
 ---
 
 ## 🐳 Docker Deployment
@@ -104,19 +132,32 @@ The app will be available on port `3000` with persistent SQLite storage in a Doc
 
 ```
 bedside-board/
-├── src/                  # React frontend
-│   ├── App.tsx          # Main dashboard component
-│   ├── Settings.tsx     # Settings modal
-│   └── storage.ts       # API client & utilities
-├── server/              # Express backend
-│   ├── index.ts         # API server
-│   └── db.ts            # SQLite database layer
-└── data/                # SQLite database (auto-created)
+├── src/                     # React frontend
+│   ├── components/          # Reusable components
+│   │   ├── CareTeam.tsx     # Care team management
+│   │   ├── ErrorBoundary.tsx # Error handling
+│   │   ├── LoadingSpinner.tsx
+│   │   ├── Skeleton.tsx     # Loading placeholders
+│   │   └── VitalsTracker.tsx # Vitals tracking
+│   ├── test/                # Test setup
+│   ├── App.tsx              # Main dashboard
+│   ├── Settings.tsx         # Settings modal
+│   ├── storage.ts           # API client & utilities
+│   └── styles.css           # Application styles
+├── server/                  # Express backend
+│   ├── index.ts             # API server with validation
+│   └── db.ts                # SQLite database layer
+├── shared/                  # Shared code
+│   ├── types.ts             # TypeScript interfaces
+│   └── validation.ts        # Zod validation schemas
+└── data/                    # SQLite database (auto-created)
 ```
 
 **Tech Stack:**
 - **Frontend:** React 19, Vite 6, TypeScript
-- **Backend:** Express.js, better-sqlite3
+- **Backend:** Express.js, better-sqlite3, Zod validation
+- **Testing:** Vitest, React Testing Library
+- **Code Quality:** ESLint, Prettier
 - **Database:** SQLite with WAL mode for reliability
 - **Deployment:** Docker with multi-stage builds
 
