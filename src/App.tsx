@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Settings from './Settings'
+import { DashboardSkeleton } from './components/Skeleton'
 import {
   loadSettings,
   loadDayData,
@@ -343,11 +344,7 @@ export default function App() {
   }, [data, settings, showToast])
 
   if (loading) {
-    return (
-      <div className="container" role="status" aria-live="polite" aria-busy="true">
-        <p>Loading your health dashboard...</p>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   if (!data || !settings) {
