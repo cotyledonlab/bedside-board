@@ -1,48 +1,22 @@
-// Types
-export interface Metric {
-  id: string
-  name: string
-  icon: string
-  minValue: number
-  maxValue: number
-  defaultValue: number
-  sortOrder: number
-}
+// Re-export shared types for convenience
+export type {
+  Metric,
+  EventType,
+  UserSettings,
+  EventEntry,
+  Question,
+  DayData,
+  DayDataUpdate,
+  VitalsReading,
+  VitalsType,
+  Medication,
+  MedicationDose,
+  CareTeamMember,
+} from '../shared/types'
 
-export interface EventType {
-  id: string
-  name: string
-  icon: string
-  sortOrder: number
-}
+export { MOOD_LEVELS, VITALS_TYPES, DEFAULT_CARE_TEAM_ROLES } from '../shared/types'
 
-export interface UserSettings {
-  metrics: Metric[]
-  eventTypes: EventType[]
-  admissionDate: string | null
-}
-
-export interface EventEntry {
-  id: string
-  time: string
-  type: string
-  note?: string
-}
-
-export interface Question {
-  id: string
-  text: string
-  answered: boolean
-}
-
-export interface DayData {
-  date: string
-  mood: number | null
-  metricValues: Record<string, number>
-  notes: string
-  events: EventEntry[]
-  questions: Question[]
-}
+import type { Metric, EventType, DayData, EventEntry, Question, UserSettings } from '../shared/types'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 

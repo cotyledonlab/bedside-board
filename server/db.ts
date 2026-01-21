@@ -85,51 +85,22 @@ db.exec(`
 
 export default db
 
-// Types
-export interface Metric {
-  id: string
-  name: string
-  icon: string
-  minValue: number
-  maxValue: number
-  defaultValue: number
-  sortOrder: number
-}
+// Re-export shared types for use in API routes
+export type {
+  Metric,
+  EventType,
+  UserSettings,
+  EventEntry,
+  Question,
+  DayData,
+  DayDataUpdate,
+  VitalsReading,
+  Medication,
+  MedicationDose,
+  CareTeamMember,
+} from '../shared/types.js'
 
-export interface EventType {
-  id: string
-  name: string
-  icon: string
-  sortOrder: number
-}
-
-export interface UserSettings {
-  metrics: Metric[]
-  eventTypes: EventType[]
-  admissionDate: string | null
-}
-
-export interface EventEntry {
-  id: string
-  time: string
-  type: string
-  note?: string
-}
-
-export interface Question {
-  id: string
-  text: string
-  answered: boolean
-}
-
-export interface DayData {
-  date: string
-  mood: number | null
-  metricValues: Record<string, number>
-  notes: string
-  events: EventEntry[]
-  questions: Question[]
-}
+import type { Metric, EventType, UserSettings, EventEntry, Question, DayData } from '../shared/types.js'
 
 // Default metrics for new users
 const DEFAULT_METRICS: Omit<Metric, 'id'>[] = [
