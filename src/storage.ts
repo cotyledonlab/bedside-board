@@ -26,7 +26,9 @@ import type {
   UserSettings,
 } from '../shared/types'
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
+// Use Vite's BASE_URL (set by `base` config) for API calls in subdirectory deployments
+// Remove trailing slash if present to avoid double slashes in URLs
+const API_BASE = (import.meta.env.VITE_API_URL || import.meta.env.BASE_URL || '').replace(/\/$/, '')
 
 // Generate UUID with fallback for non-secure contexts (HTTP)
 function generateUUID(): string {
