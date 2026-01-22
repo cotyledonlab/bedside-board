@@ -15,7 +15,9 @@ RUN npm ci
 # Copy source files
 COPY . .
 
-# Build frontend
+# Build frontend with base path for subdirectory deployment
+ARG BASE_PATH=/demos/bedside-board
+ENV BASE_PATH=${BASE_PATH}
 RUN npm run build
 
 # Build server
