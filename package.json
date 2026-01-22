@@ -9,7 +9,7 @@
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
     "build:server": "tsc -p tsconfig.server.json",
-    "start": "node dist-server/index.js",
+    "start": "node dist-server/server/index.js",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

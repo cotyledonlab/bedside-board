@@ -49,4 +49,4 @@ ENV DB_PATH=/app/data/bedside.db
 EXPOSE 3000
 
 # Start server
-CMD ["node", "dist-server/index.js"]
+CMD ["node", "dist-server/server/index.js"]
