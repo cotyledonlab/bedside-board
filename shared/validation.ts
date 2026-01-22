@@ -115,11 +115,12 @@ export const CreateCareTeamMemberSchema = CareTeamMemberSchema.omit({ id: true }
 
 /**
  * Validation helper that returns typed result
+ * Uses z.output<T> to properly type the result after defaults are applied
  */
-export function validate<T>(
-  schema: z.ZodSchema<T>,
+export function validate<T extends z.ZodTypeAny>(
+  schema: T,
   data: unknown
-): { success: true; data: T } | { success: false; error: string } {
+): { success: true; data: z.output<T> } | { success: false; error: string } {
   const result = schema.safeParse(data)
   if (result.success) {
     return { success: true, data: result.data }
