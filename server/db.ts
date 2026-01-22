@@ -83,6 +83,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_user_event_types_user ON user_event_types(user_id);
 `)
 
+// Run migrations for existing databases
+function runMigrations() {
+  // Check if day_data has metric_values column
+  const columns = db.prepare("PRAGMA table_info(day_data)").all() as { name: string }[]
+  const columnNames = columns.map(c => c.name)
+
+  if (!columnNames.includes('metric_values')) {
+    console.log('Migration: Adding metric_values column to day_data')
+    db.exec("ALTER TABLE day_data ADD COLUMN metric_values TEXT DEFAULT '{}'")
+  }
+  if (!columnNames.includes('notes')) {
+    console.log('Migration: Adding notes column to day_data')
+    db.exec("ALTER TABLE day_data ADD COLUMN notes TEXT DEFAULT ''")
+  }
+  if (!columnNames.includes('updated_at')) {
+    console.log('Migration: Adding updated_at column to day_data')
+    db.exec("ALTER TABLE day_data ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))")
+  }
+}
+
+runMigrations()
+
 export default db
 
 // Re-export shared types for use in API routes
