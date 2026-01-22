@@ -347,7 +347,8 @@ app.delete('/api/questions/:id', (req, res) => {
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  const staticPath = path.resolve(__dirname, '..', 'dist')
+  // Server runs from dist-server/server/, so go up 2 levels to /app, then into dist/
+  const staticPath = path.resolve(__dirname, '..', '..', 'dist')
   console.log('Static path:', staticPath)
   console.log('Static path exists:', fs.existsSync(staticPath))
 
