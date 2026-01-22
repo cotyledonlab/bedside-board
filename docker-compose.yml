@@ -1,7 +1,6 @@
 services:
   app:
     build: .
-    # Note: No host port mapping needed - Dokploy/Traefik handles external routing
     expose:
       - "3000"
     volumes:
@@ -11,6 +10,15 @@ services:
       - PORT=3000
       - DB_PATH=/app/data/bedside.db
     restart: unless-stopped
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.bedside-board.loadbalancer.server.port=3000"
 
 volumes:
   bedside-data:
+
+networks:
+  dokploy-network:
+    external: true
