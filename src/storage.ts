@@ -28,11 +28,30 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
+// Generate UUID with fallback for non-secure contexts (HTTP)
+function generateUUID(): string {
+  // crypto.randomUUID() requires secure context (HTTPS)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback using crypto.getRandomValues()
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+      (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16)
+    )
+  }
+  // Last resort fallback
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 // Get or generate a persistent user ID
 function getUserId(): string {
   let userId = localStorage.getItem('bedside-board-user-id')
   if (!userId) {
-    userId = crypto.randomUUID()
+    userId = generateUUID()
     localStorage.setItem('bedside-board-user-id', userId)
   }
   return userId
@@ -222,7 +241,7 @@ export function formatTime(date: Date = new Date()): string {
 }
 
 export function generateId(): string {
-  return crypto.randomUUID()
+  return generateUUID()
 }
 
 export function formatDate(dateStr: string): string {
